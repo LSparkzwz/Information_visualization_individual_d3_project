@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Progetto InfoVis</title>
+</head>
+<body>
+<svg id="container"></svg>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script>
+    d3.select("body")
+        .style("width", window.innerWidth + "px")
+        .style("height", window.innerHeight + "px")
+        .style("margin", "0px")
+        .style("padding", "0px");
+
+    let container = d3.select("#container")
+        .style("width", window.innerWidth + "px")
+        .style("height", window.innerHeight + "px")
+        .style('background-color',"#E5D0CB");
+
+
+    let mosquitoPositions;
+
+    d3.json("mosquito.json").then( data => {
+        d3.xml("mosquito.svg").then( () => {
+            d3.xml("ghost.svg").then( () => {
+                mosquitoPositions = data.positions;
+
+                //faccio apparire la prima zanzara
+                spawnMosquito(0, [data.positions[0]]);
+            });
+        });
+    });
+
+    function spawnMosquito(i, data) {
+        let flies = container.selectAll("image").data(data);
+
+        flies
+            .attr("xlink:href", "ghost.svg")
+            .on("click", null);
+
+        flies.enter()
+            .append("image")
+            .attr("xlink:href", "mosquito.svg" )
+            .attr("width", "40px")
+            .attr("height", "40px")
+            //posizione relativa alla grandezza del browser
+            .attr("x", (d) => d.x * 0.01 * window.innerWidth + "px")
+            .attr("y", (d) => d.y * 0.01 * window.innerHeight + "px")
+            .on("click", () => {
+                let j = updateIterator(i);
+                if(j !== 0)
+                {
+                    spawnMosquito(j, data.concat(mosquitoPositions[j]));
+                }
+                else
+                {
+                    //la 20esima zanzara è morta
+                    //[] permette a flies.exit().remove() di pulire lo schermo
+                    spawnMosquito(j, []);
+                    //ricomincio da capo dalla prima zanzara
+                    spawnMosquito(j, [mosquitoPositions[j]]);
+                }
+            });
+
+        flies.exit().remove();
+    }
+
+    function updateIterator(i){
+        //se sono alla 20esima zanzara devo ricominciare
+        //altrimenti faccio apparire la prossima zanzara
+        return i === 19 ? 0 : ++i;
+    }
+
+</script>
+</body>
+</html>
