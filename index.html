@@ -6,21 +6,39 @@
 </head>
 <body>
 <svg id="container"></svg>
+<div id="x"></div>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <script>
     d3.select("body")
-        .style("width", window.innerWidth + "px")
-        .style("height", window.innerHeight + "px")
-        .style("margin", "0px")
-        .style("padding", "0px");
+         .style("width", '100vw')
+         .style("height", '100vh')
+         .style("margin", "0px")
+         .style("padding", "0px")
+         .style("overflow","hidden")
+
+    d3.select("#x")
+        .style("width", '50px')
+        .style("height", '50px')
+        .style("position", "absolute")
+        .style("left", 0)
+        .style("top", 0)
+        .style("background","white")
+        .style("border-radius", "0px 0px 8px 0px")
+        .style("display","flex")
+        .style("justify-content","center")
+        .style("align-items","center")
+        .append("img")
+        .attr("src", "./cancel.svg")
+        .style("width", "30px")
 
     let container = d3.select("#container")
-        .style("width", window.innerWidth + "px")
-        .style("height", window.innerHeight + "px")
+        .style("width","100%")
+        .style("height", "100%")
         .style('background-color',"#E5D0CB");
 
 
     let mosquitoPositions;
+    let deadMosquitoes = [];
 
     d3.json("mosquito.json").then( data => {
         d3.xml("mosquito.svg").then( () => {
@@ -34,38 +52,57 @@
     });
 
     function spawnMosquito(i, data) {
-        let flies = container.selectAll("image").data(data);
+        let xButton = d3.select("#x")
+        let mosquitoes = container.selectAll("image.mosquito").data(data);
 
-        flies
+        mosquitoes
             .attr("xlink:href", "ghost.svg")
             //non posso schiacciare una zanzara già schiacciata
             .on("click", null);
 
-        flies.enter()
+        mosquitoes.enter()
             .append("image")
+            .attr("class","mosquito")
             .attr("xlink:href", "mosquito.svg" )
             .attr("width", "40px")
             .attr("height", "40px")
             //posizione relativa alla grandezza del browser
             .attr("x", (d) => d.x * 0.01 * window.innerWidth + "px")
             .attr("y", (d) => d.y * 0.01 * window.innerHeight + "px")
-            .on("click", () => {
-                let j = updateIterator(i);
-                if(j !== 0)
-                {
-                    spawnMosquito(j, data.concat(mosquitoPositions[j]));
-                }
-                else
-                {
-                    //la 20esima zanzara è morta
-                    //[] permette a flies.exit().remove() di pulire lo schermo
-                    spawnMosquito(j, []);
-                    //ricomincio da capo dalla prima zanzara
-                    spawnMosquito(j, [mosquitoPositions[j]]);
-                }
+            .on("click", function(){
+                //lascio la zanzara cliccata come morta
+                deadMosquitoes = deadMosquitoes.concat([mosquitoPositions[i]])
+                spawnDeadMosquito(i, deadMosquitoes)
+                //faccio apparire una zanzara nella prima posizione
+                spawnMosquito(i, []); //pulisco
+                spawnMosquito(0, [mosquitoPositions[0]]);
             });
 
-        flies.exit().remove();
+        xButton.on("click", ()=>{
+            let j = updateIterator(i);
+            spawnMosquito(j, []); //pulisco
+            //faccio apparire la prossima zanzara trovata nel json
+            spawnMosquito(j, [mosquitoPositions[j]]);
+        })
+
+        //toglie tutte le zanzare che ormai non si trovano dentro l'array
+        mosquitoes.exit().remove();
+    }
+
+    function spawnDeadMosquito(i, data) {
+        let mosquitoes = container.selectAll("image.dead_mosquito").data(data);
+        //le specifiche del progetto non dicono nulla riguardo l'interagire con le zanzare morte
+        //quindi le lascio sullo schermo per sempre
+
+        mosquitoes.enter()
+            .append("image")
+            .attr("class","dead_mosquito")
+            .attr("xlink:href", "ghost.svg" )
+            .attr("width", "40px")
+            .attr("height", "40px")
+            //posizione relativa alla grandezza del browser
+            .attr("x", (d) => d.x * 0.01 * window.innerWidth + "px")
+            .attr("y", (d) => d.y * 0.01 * window.innerHeight + "px")
     }
 
     function updateIterator(i){
